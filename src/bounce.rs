@@ -4,19 +4,19 @@ use std::cmp::{min, max};
 use crate::{actor::*, log};
 use crate::rand::*;
 
-pub struct Trunk {
+pub struct Raft {
     pos: Pt,
     step: Pt,
     size: Pt,
     speed: i32,
     type_trunk: i32,
 }
-impl Trunk {
-    pub fn new(pos: Pt, speed: i32, type_trunk: i32) -> Trunk {
-        Trunk{pos: pos, step: pt(1, 0), size: pt(if type_trunk == 0 { 64 } else { 96 } , 32), speed: speed, type_trunk: type_trunk}
+impl Raft {
+    pub fn new(pos: Pt, speed: i32, type_trunk: i32) -> Raft {
+        Raft{pos: pos, step: pt(1, 0), size: pt(if type_trunk == 0 { 64 } else { 96 } , 32), speed: speed, type_trunk: type_trunk}
     }
 }
-impl Actor for Trunk {
+impl Actor for Raft {
     fn act(&mut self, arena: &mut ArenaStatus) {
         // for other in arena.collisions() {
         //     if let Some(_) = other.as_any().downcast_ref::<Ghost>() {
@@ -38,6 +38,74 @@ impl Actor for Trunk {
     fn size(&self) -> Pt { self.size }
     fn sprite(&self) -> Option<Pt> { 
         Some(pt(if self.type_trunk == 0 { 224 } else { 192 } , 96))
+    }
+    fn alive(&self) -> bool { true }
+    fn as_any(&self) -> &dyn Any { self }
+    fn speed(&self) -> i32 { self.speed }
+}
+
+pub struct Turtle {
+    pos: Pt,
+    step: Pt,
+    size: Pt,
+    speed: i32,
+    under_water: i32,
+    change_sprite: i32,
+    sprite_fps: i32,
+    sprite_tick: i32,
+}
+impl Turtle {
+    pub fn new(pos: Pt, speed: i32, sprite_tick: i32) -> Turtle {
+        Turtle{pos: pos, step: pt(1, 0), size: pt(32 , 32), speed: speed, under_water: randint(0, 0), change_sprite: 0, sprite_fps: 20, sprite_tick: sprite_tick}
+    }
+}
+impl Actor for Turtle {
+    fn act(&mut self, arena: &mut ArenaStatus) {
+        self.change_sprite += 1;
+        if self.under_water == 1  && self.change_sprite > (self.sprite_tick + self.sprite_fps * 6) {
+            self.change_sprite = self.sprite_tick; 
+        }
+        else if self.under_water == 0 && self.change_sprite >= (self.sprite_tick + self.sprite_fps * 3) {
+            self.change_sprite = self.sprite_tick;
+        }   
+        
+        // for other in arena.collisions() {
+        //     if let Some(_) = other.as_any().downcast_ref::<Ghost>() {
+        //     } else {
+        //         let diff = self.pos - other.pos();
+        //         self.step.x = self.speed * if diff.x > 0 { 1 } else { -1 };
+        //         self.step.y = self.speed * if diff.y > 0 { 1 } else { -1 };
+        //     }
+        // }
+        if self.pos.x < -300 { self.pos.x = arena.size().x + 300 }
+        if self.pos.x > arena.size().x + 300 { self.pos.x = -300 }
+        //if tl.y < 0 { self.step.y = self.speed; }
+        //if br.x > 0 { self.step.x = -self.speed; }
+        //if br.y > 0 { self.step.y = -self.speed; }
+        self.step.x = self.speed;
+        self.pos = self.pos + self.step;
+    }
+    fn pos(&self) -> Pt { self.pos }
+    fn size(&self) -> Pt { self.size }
+    fn sprite(&self) -> Option<Pt> { 
+        if self.change_sprite >= self.sprite_tick && self.change_sprite < (self.sprite_fps + self.sprite_tick) {
+            Some(pt(256, 128))
+        }
+        else if self.change_sprite >= (self.sprite_fps + self.sprite_tick) && self.change_sprite < (self.sprite_fps * 2 + self.sprite_tick) {
+            Some(pt(224, 128))
+        }
+        else if self.change_sprite >= (self.sprite_fps * 2 + self.sprite_tick) && self.change_sprite < (self.sprite_fps * 3 +  self.sprite_tick) {
+            Some(pt(192, 128))
+        }
+        else if self.change_sprite >= (self.sprite_fps * 3 + self.sprite_tick) && self.change_sprite < (self.sprite_fps * 4 + self.sprite_tick) {
+            Some(pt(192, 160))
+        }
+        else if self.change_sprite >= (self.sprite_fps * 4 + self.sprite_tick) && self.change_sprite < (self.sprite_fps * 5 + self.sprite_tick) {
+            Some(pt(224, 160))
+        }
+        else {
+            None
+        }
     }
     fn alive(&self) -> bool { true }
     fn as_any(&self) -> &dyn Any { self }
@@ -153,7 +221,7 @@ impl Actor for Frog {
                     self.blinking = 60;
                     self.lives -= 1;
                 }
-                if let Some(_) = other.as_any().downcast_ref::<Trunk>() {
+                if let Some(_) = other.as_any().downcast_ref::<Raft>() {
                     self.on_raft = true;
                     if self.count_steps == 0 {
                         self.dragging = other.speed();
@@ -253,20 +321,29 @@ impl BounceGame {
             }
         }
 
-        for i in 0..ntrunks {
+        // for i in 0..5 {
+        //     let mut updatepos = 0;
+        //     let speed = randint(1, 4);
+            
+        //     for _ in 0..ntrunks {
+        //         //arena.spawn(Box::new(Vehicle::new(BounceGame::randpt(size), true, -1)));
+        //         //let car = randint(0, 1);
+        //         arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
+        //         updatepos += randint(100, 350);
+        //     }
+        // }
+
+        for i in 0..5 {
             let mut updatepos = 0;
             let speed = randint(1, 4);
             
-            for _ in 0..4 {
+            for _ in 0..ntrunks {
                 //arena.spawn(Box::new(Vehicle::new(BounceGame::randpt(size), true, -1)));
                 //let car = randint(0, 1);
-                arena.spawn(Box::new(Trunk::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
+                arena.spawn(Box::new(Turtle::new(pt(updatepos, 192-(32*i)), speed, randint(1, 10))));
                 updatepos += randint(100, 350);
             }
         }
-
-        arena.spawn(Box::new(Trunk::new(pt(0, 0), 3, 0)));
-        arena.spawn(Box::new(Trunk::new(pt(150, 0), 3, 1)));
 
         // for _ in 0..nghosts {
         //     arena.spawn(Box::new(Ghost::new(BounceGame::randpt(size))));
