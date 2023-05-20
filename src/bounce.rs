@@ -172,7 +172,7 @@ impl Water {
     }
 }
 impl Actor for Water {
-    fn act(&mut self, arena: &mut ArenaStatus) {
+    fn act(&mut self, _arena: &mut ArenaStatus) {
     }
     fn sprite(&self) -> Option<Pt> { 
         None
@@ -200,7 +200,7 @@ pub struct Frog {
 impl Frog {
     pub fn new(pos: Pt) -> Frog {
         Frog{pos: pos, step: pt(0, 0), size: pt(32, 32),
-            speed: 32, lives: 3, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false}
+            speed: 32, lives: 5, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false}
     }
     fn lives(&self) -> i32 { self.lives }
 }
@@ -308,7 +308,7 @@ impl Actor for Frog {
             self.pos.y = min(max(self.pos.y, 0), scr.y);  // clamp
         }
 
-        if self.pos.x > 640 || self.pos.x < 0 {
+        if self.pos.x > 640 || self.pos.x < -32 {
             self.blinking = 20;
             self.lives -= 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
@@ -331,20 +331,19 @@ impl Actor for Frog {
 
 pub struct BounceGame {
     arena: Arena,
-    playtime: i32
+    playtime: i32, 
 }
 impl BounceGame {
-    fn randpt(size: Pt) -> Pt {
-        let mut p = pt(randint(0, size.x), randint(0, size.y));
-        while (p.x - size.x / 2).pow(2) + (p.y - size.y / 2).pow(2) < 10000 {
-            p = pt(randint(0, size.x), randint(0, size.y));
-        }
-        return p;
-    }
+    // fn randpt(size: Pt) -> Pt {
+    //     let mut p = pt(randint(0, size.x), randint(0, size.y));
+    //     while (p.x - size.x / 2).pow(2) + (p.y - size.y / 2).pow(2) < 10000 {
+    //         p = pt(randint(0, size.x), randint(0, size.y));
+    //     }
+    //     return p;
+    // }
     pub fn new(size: Pt, nvehicles: i32, nrafts: i32, nturtles: i32) -> BounceGame {
         let mut arena = Arena::new(size);
         //let size = size - pt(20, 20);
-        arena.spawn(Box::new(Frog::new(pt(arena.size().x/2, arena.size().y - 32))));
         arena.spawn(Box::new(Water::new(pt(-32,32))));
 
         for i in 0..5 {
@@ -402,6 +401,9 @@ impl BounceGame {
                     updatepos += randint(100, 350);
                 }
             }
+
+            arena.spawn(Box::new(Frog::new(pt(arena.size().x/2, arena.size().y - 32))));
+
         }
 
         // for _ in 0..nghosts {
@@ -417,9 +419,11 @@ impl BounceGame {
     pub fn remaining_lives(&self) -> i32 {
         let mut lives = 0;
         let actors = self.actors();
-        if let Some(b) = actors.first() {
-            if let Some(hero) = b.as_any().downcast_ref::<Frog>() {
+        for a in actors
+        {
+            if let Some(hero) = a.as_any().downcast_ref::<Frog>() {
                 lives = hero.lives();
+                return lives;
             }
         }
         lives
