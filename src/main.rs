@@ -5,7 +5,7 @@ pub mod rand;
 
 
 fn main() {
-    let mut game = bounce::BounceGame::new(pt2d::pt(480, 360), 10, 0);
+    let mut game = bounce::BounceGame::new(pt2d::pt(480, 360), 2, 3,3);
     for _ in 0..100 {
         game.tick(String::new());
         for b in game.actors() {

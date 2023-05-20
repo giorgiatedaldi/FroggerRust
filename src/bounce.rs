@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::cmp::{min, max};
 
-use crate::{actor::*, log};
+use crate::{actor::*, log, rand};
 use crate::rand::*;
 
 pub struct Raft {
@@ -55,8 +55,8 @@ pub struct Turtle {
     sprite_tick: i32,
 }
 impl Turtle {
-    pub fn new(pos: Pt, speed: i32, sprite_tick: i32) -> Turtle {
-        Turtle{pos: pos, step: pt(1, 0), size: pt(32 , 32), speed: speed, under_water: randint(0, 0), change_sprite: 0, sprite_fps: 20, sprite_tick: sprite_tick}
+    pub fn new(pos: Pt, speed: i32, under_water: i32, sprite_tick: i32) -> Turtle {
+        Turtle{pos: pos, step: pt(1, 0), size: pt(32 , 32), speed: speed, under_water: under_water, change_sprite: 0, sprite_fps: 20, sprite_tick: sprite_tick}
     }
 }
 impl Actor for Turtle {
@@ -163,34 +163,25 @@ impl Actor for Vehicle {
 }
 
 
-pub struct Ghost {
+pub struct Water {
     pos: Pt,
-    speed: i32,
-    visible: bool
 }
-impl Ghost {
-    pub fn new(pos: Pt) -> Ghost {
-        Ghost{pos: pos, speed: 4, visible: true}
+impl Water {
+    pub fn new(pos: Pt) -> Water {
+        Water{pos: pos}
     }
 }
-impl Actor for Ghost {
+impl Actor for Water {
     fn act(&mut self, arena: &mut ArenaStatus) {
-        let scr = arena.size();
-        let step = pt(randint(-1, 1) * self.speed, randint(-1, 1) * self.speed);
-        self.pos = self.pos + step + scr;
-        self.pos.x %= scr.x;
-        self.pos.y %= scr.y;
-        if randint(0, 99) == 0 { self.visible = ! self.visible; }
-        //if randint(0, 999) == 0 { arena.spawn(Box::new(Vehicle::new(self.pos))); }
     }
     fn sprite(&self) -> Option<Pt> { 
-        Some(pt(20, if self.visible { 0 } else { 20 })) 
+        None
     }
     fn pos(&self) -> Pt { self.pos }
-    fn size(&self) -> Pt { pt(20, 20) }
+    fn size(&self) -> Pt { pt(704, 192) }
     fn alive(&self) -> bool { true }
     fn as_any(&self) -> &dyn Any { self }
-    fn speed(&self) -> i32 { self.speed }
+    fn speed(&self) -> i32 { 0}
 }
 
 
@@ -204,31 +195,68 @@ pub struct Frog {
     count_steps: i32,
     dragging: i32,
     on_raft: bool,
+    on_water: bool,
 }
 impl Frog {
     pub fn new(pos: Pt) -> Frog {
         Frog{pos: pos, step: pt(0, 0), size: pt(32, 32),
-            speed: 32, lives: 3, blinking: 0, count_steps: 0, dragging: 0, on_raft: false}
+            speed: 32, lives: 3, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false}
     }
     fn lives(&self) -> i32 { self.lives }
 }
 impl Actor for Frog {
+
     fn act(&mut self, arena: &mut ArenaStatus) {
         if self.blinking == 0 {
             self.on_raft = false;
+            self.on_water = false;
+            //log("entering collision check on_raft false");
             for other in arena.collisions() {
                 if let Some(_) = other.as_any().downcast_ref::<Vehicle>() {
                     self.blinking = 60;
                     self.lives -= 1;
+                    self.pos = pt(arena.size().x/2, arena.size().y - 32)
                 }
                 if let Some(_) = other.as_any().downcast_ref::<Raft>() {
                     self.on_raft = true;
+                    log("on_raft true");
                     if self.count_steps == 0 {
                         self.dragging = other.speed();
                     }
                 }
+                if let Some(_) = other.as_any().downcast_ref::<Water>() {
+                    //self.lives -= 1;
+                    self.on_water = true;
+                    log("on water true")
+                }
+                if let Some(_) = other.as_any().downcast_ref::<Turtle>() {
+                    if other.sprite().is_some() {
+                        self.on_raft = true;
+                    }
+                    
+                    if self.count_steps == 0 {
+                        self.dragging = other.speed();
+                    }
+                                                            // if other.sprite().is_some() {
+                    //      self.on_raft = true;
+                    //     if self.count_steps == 0 {
+                    //         self.dragging = other.speed();
+                    //     }
+                    // }
+                    // else {
+                    //     self.lives -= 1;
+                    //     self.pos = pt(arena.size().x/2, arena.size().y - 32);
+                    // }
+                }
+
             }
         }
+
+        if !self.on_raft && self.on_water {
+            self.lives -= 1;
+            self.pos = pt(arena.size().x/2, arena.size().y - 32);
+        }
+
         let keys = arena.current_keys();
         self.step = pt(0, 0);
 
@@ -266,15 +294,24 @@ impl Actor for Frog {
         self.dragging = 0;
         //self.pos = self.pos + self.step;
 
-        if (self.pos.y > 64 && self.pos.y < 224) || (self.pos.y > 64 && self.pos.y < 224) && (self.pos.x < self.size.x || self.pos.x > 640 + self.size.x) {
-            if !self.on_raft {
-                self.lives -= 1;
-            }
-        }
+        // if (self.pos.y > 64 && self.pos.y < 224) || (self.pos.y > 64 && self.pos.y < 215) && (self.pos.x < self.size.x || self.pos.x > 640 + self.size.x) {
+        //     if !self.on_raft {
+        //         log("in water and on_raft = false");
+        //         self.lives -= 1;
+        //     }
+        // }
 
         let scr = arena.size() - self.size;
-        self.pos.x = min(max(self.pos.x, 0), scr.x);  // clamp
-        self.pos.y = min(max(self.pos.y, 0), scr.y);  // clamp
+        if ! self.on_water {
+            self.pos.x = min(max(self.pos.x, 0), scr.x);  // clamp
+            self.pos.y = min(max(self.pos.y, 0), scr.y);  // clamp
+        }
+
+        if self.pos.x > 640 || self.pos.x < 0 {
+            self.lives -= 1;
+            self.pos = pt(arena.size().x/2, arena.size().y - 32);
+        }
+        
         self.blinking = max(self.blinking - 1, 0);
 
     }
@@ -302,10 +339,12 @@ impl BounceGame {
         }
         return p;
     }
-    pub fn new(size: Pt, nvehicles: i32, ntrunks: i32) -> BounceGame {
+    pub fn new(size: Pt, nvehicles: i32, nrafts: i32, nturtles: i32) -> BounceGame {
         let mut arena = Arena::new(size);
         //let size = size - pt(20, 20);
         arena.spawn(Box::new(Frog::new(pt(arena.size().x/2, arena.size().y - 32))));
+        arena.spawn(Box::new(Water::new(pt(-32,32))));
+
         for i in 0..5 {
             let mut updatepos = 0;
             let mut speed = randint(2, 7);
@@ -336,12 +375,30 @@ impl BounceGame {
         for i in 0..5 {
             let mut updatepos = 0;
             let speed = randint(1, 4);
-            
-            for _ in 0..ntrunks {
+
+            // for _ in 0..nrafts {
+            //     arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
+            //     updatepos += randint(100, 350);
+            // }
+
+            if i%2 == 0 {
+                for _ in 0..nturtles {
                 //arena.spawn(Box::new(Vehicle::new(BounceGame::randpt(size), true, -1)));
                 //let car = randint(0, 1);
-                arena.spawn(Box::new(Turtle::new(pt(updatepos, 192-(32*i)), speed, randint(1, 10))));
-                updatepos += randint(100, 350);
+                    let sprite_tick = randint(1, 10);
+                    let under_water = randint(0,1);
+                    for n in 0..randint(2, 3)
+                    {
+                        arena.spawn(Box::new(Turtle::new(pt(updatepos + 32*n, 192-(32*i)), -speed, under_water, sprite_tick)));
+                    }
+                    updatepos += randint(100, 350); 
+                }
+            }
+            else {
+                for _ in 0..nrafts {
+                    arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
+                    updatepos += randint(100, 350);
+                }
             }
         }
 
