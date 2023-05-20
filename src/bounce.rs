@@ -207,13 +207,13 @@ impl Frog {
 impl Actor for Frog {
 
     fn act(&mut self, arena: &mut ArenaStatus) {
-        if self.blinking == 0 {
+
             self.on_raft = false;
             self.on_water = false;
             //log("entering collision check on_raft false");
             for other in arena.collisions() {
                 if let Some(_) = other.as_any().downcast_ref::<Vehicle>() {
-                    self.blinking = 60;
+                    self.blinking = 20;
                     self.lives -= 1;
                     self.pos = pt(arena.size().x/2, arena.size().y - 32)
                 }
@@ -249,10 +249,11 @@ impl Actor for Frog {
                     // }
                 }
 
-            }
+            
         }
 
         if !self.on_raft && self.on_water {
+            self.blinking = 20;
             self.lives -= 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
         }
@@ -308,6 +309,7 @@ impl Actor for Frog {
         }
 
         if self.pos.x > 640 || self.pos.x < 0 {
+            self.blinking = 20;
             self.lives -= 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
         }

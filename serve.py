@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import http.server, socketserver
 
-PORT = 8003
+PORT = 8000
 
 handler = http.server.SimpleHTTPRequestHandler
 handler.extensions_map = {
