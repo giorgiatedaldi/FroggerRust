@@ -230,15 +230,15 @@ pub struct Frog {
     count_winbox: i32,
     winbox_list: [bool; 5],
     on_free_winbox: bool,
-    on_occupied_winbox: bool, 
+    on_occupied_winbox: bool,
+    direction: String, 
 }
 impl Frog {
     pub fn new(pos: Pt) -> Frog {
         Frog{pos: pos, step: pt(0, 0), size: pt(32, 32),
-            speed: 32, lives: 5, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false, count_winbox: 0, winbox_list: [false;5], on_free_winbox:false, on_occupied_winbox:false}
+            speed: 32, lives: 5, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false, count_winbox: 0, winbox_list: [false;5], on_free_winbox:false, on_occupied_winbox:false, direction: "Up".to_string()}
     }
     fn lives(&self) -> i32 { self.lives }
-    fn get_winbox_count(&self) -> i32 { self.count_winbox }
     fn get_winbox_list(&self) -> [bool;5] { self.winbox_list }
 }
 impl Actor for Frog {
@@ -278,7 +278,8 @@ impl Actor for Frog {
                 if let Some(_) = other.as_any().downcast_ref::<Vehicle>() {
                     self.blinking = 20;
                     self.lives -= 1;
-                    self.pos = pt(arena.size().x/2, arena.size().y - 32)
+                    self.pos = pt(arena.size().x/2, arena.size().y - 32);
+                    self.direction = "Up".to_string();
                 }
                 if let Some(_) = other.as_any().downcast_ref::<Raft>() {
                     self.on_raft = true;
@@ -310,6 +311,7 @@ impl Actor for Frog {
             self.blinking = 20;
             self.lives -= 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
+            self.direction = "Up".to_string();
         }
         else if self.on_free_winbox && self.on_water && !self.on_raft {
             self.count_winbox += 1;
@@ -326,21 +328,25 @@ impl Actor for Frog {
                 self.count_steps = self.speed;
                 self.step.y = -self.speed;
                 self.step.x = 0;
+                self.direction = "Up".to_string();
             } 
             if keys.contains(&"ArrowDown") {
                 self.count_steps = self.speed;
                 self.step.y = self.speed;
                 self.step.x = 0;
+                self.direction = "Down".to_string();
             }
             if keys.contains(&"ArrowLeft") {
                 self.count_steps = self.speed;
                 self.step.x = -self.speed;
                 self.step.y = 0;
+                self.direction = "Left".to_string();
             } 
             if keys.contains(&"ArrowRight") {
                 self.count_steps = self.speed;
                 self.step.x = self.speed;
                 self.step.y = 0;
+                self.direction = "Right".to_string();
             }
             
         }
@@ -371,6 +377,7 @@ impl Actor for Frog {
             self.blinking = 20;
             self.lives -= 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
+            self.direction = "Up".to_string();
         }
         
         self.blinking = max(self.blinking - 1, 0);
@@ -379,8 +386,24 @@ impl Actor for Frog {
     fn pos(&self) -> Pt { self.pos }
     fn size(&self) -> Pt { self.size }
     fn sprite(&self) -> Option<Pt> {
-        if self.blinking > 0 && (self.blinking / 2) % 2 == 0 { None }
-        else { Some(pt(0, 0)) }
+        if self.blinking > 0 && (self.blinking / 2) % 2 == 0 { None } 
+        else {
+            if self.direction == "Up" {
+                Some(pt(0, 0))   
+            }
+            else if self.direction == "Down" {
+                Some(pt(160, 32))
+            }
+            else if self.direction == "Left" {
+                Some(pt(96, 0))
+            }
+            else if self.direction == "Right" {
+                Some(pt(64, 32))
+            }
+            else {
+                None
+            }
+        }
     }
     fn alive(&self) -> bool { self.lives > 0 }
     fn as_any(&self) -> &dyn Any { self }
