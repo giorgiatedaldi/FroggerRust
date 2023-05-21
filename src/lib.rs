@@ -21,7 +21,6 @@ impl BounceGui {
     }
     pub fn tick(&mut self) {
         g2d::clear_canvas();
-        //g2d::draw_image("frogger-bg.png".to_string(), pt2d::pt(0, 0));
         g2d::draw_image_clip("frogger-bg.png".to_string(), pt2d::pt(0, 0), pt2d::pt(0, 16), pt2d::pt(640, 448));
         for b in self.game.actors() {
             if let Some(img) = b.sprite() {
@@ -30,9 +29,11 @@ impl BounceGui {
                 //g2d::fill_rect(b.pos(), b.size());
             }
         }
+        //let red = g2d::Color(255, 0, 0);
+        g2d::set_color(255, 0, 0);
         let txt = format!("Lives: {}",
             self.game.remaining_lives());
-        g2d::draw_text(txt, pt2d::pt(0, 0), 24);
+        g2d::draw_text(txt, pt2d::pt(0, 0), 20);
 
         if self.game.game_over() {
             g2d::alert("Game over".to_string());
