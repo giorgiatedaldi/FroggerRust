@@ -12,7 +12,7 @@ pub struct BounceGui {
 }
 impl BounceGui {
     pub fn new() -> BounceGui {
-        let game = bounce::BounceGame::new(pt2d::pt(640, 448), 2, 3, 3);
+        let game = bounce::BounceGame::new(pt2d::pt(640, 448), 2, 5, 5);
         BounceGui{game}
     }
     pub fn setup(&self) {
@@ -30,8 +30,8 @@ impl BounceGui {
                 //g2d::fill_rect(b.pos(), b.size());
             }
         }
-        let txt = format!("Lives: {} Time: {}",
-            self.game.remaining_lives(), self.game.remaining_time());
+        let txt = format!("Lives: {}",
+            self.game.remaining_lives());
         g2d::draw_text(txt, pt2d::pt(0, 0), 24);
 
         if self.game.game_over() {

@@ -1,3 +1,4 @@
+use core::num;
 use std::any::Any;
 use std::cmp::{min, max};
 
@@ -165,10 +166,11 @@ impl Actor for Vehicle {
 
 pub struct Water {
     pos: Pt,
+    size: Pt
 }
 impl Water {
     pub fn new(pos: Pt) -> Water {
-        Water{pos: pos}
+        Water{pos: pos, size: pt(704, 192)}
     }
 }
 impl Actor for Water {
@@ -178,7 +180,36 @@ impl Actor for Water {
         None
     }
     fn pos(&self) -> Pt { self.pos }
-    fn size(&self) -> Pt { pt(704, 192) }
+    fn size(&self) -> Pt { self.size }
+    fn alive(&self) -> bool { true }
+    fn as_any(&self) -> &dyn Any { self }
+    fn speed(&self) -> i32 { 0}
+}
+
+
+pub struct WinBox {
+    pos: Pt,
+    size: Pt,
+    occupied: bool,
+    number: i32,
+}
+impl WinBox {
+    pub fn new(pos: Pt, number: i32) -> WinBox {
+        WinBox{pos: pos, size: pt (32, 32), occupied: false, number: number}
+    }
+    pub fn get_number(&self) -> i32 { self.number }
+}
+impl Actor for WinBox {
+    fn act(&mut self, arena: &mut ArenaStatus) {
+        for other in arena.collisions() {
+            if let Some(_) = other.as_any().downcast_ref::<Frog>() {
+                self.occupied = true;
+            }
+        }
+    }
+    fn sprite(&self) -> Option<Pt> { if self.occupied { Some (pt(256, 256)) } else { None } }
+    fn pos(&self) -> Pt { self.pos }
+    fn size(&self) -> Pt { self.size }
     fn alive(&self) -> bool { true }
     fn as_any(&self) -> &dyn Any { self }
     fn speed(&self) -> i32 { 0}
@@ -196,13 +227,19 @@ pub struct Frog {
     dragging: i32,
     on_raft: bool,
     on_water: bool,
+    count_winbox: i32,
+    winbox_list: [bool; 5],
+    on_free_winbox: bool,
+    on_occupied_winbox: bool, 
 }
 impl Frog {
     pub fn new(pos: Pt) -> Frog {
         Frog{pos: pos, step: pt(0, 0), size: pt(32, 32),
-            speed: 32, lives: 5, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false}
+            speed: 32, lives: 5, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false, count_winbox: 0, winbox_list: [false;5], on_free_winbox:false, on_occupied_winbox:false}
     }
     fn lives(&self) -> i32 { self.lives }
+    fn get_winbox_count(&self) -> i32 { self.count_winbox }
+    fn get_winbox_list(&self) -> [bool;5] { self.winbox_list }
 }
 impl Actor for Frog {
 
@@ -210,8 +247,34 @@ impl Actor for Frog {
 
             self.on_raft = false;
             self.on_water = false;
+            self.on_free_winbox = false;
+            self.on_occupied_winbox = false;
             //log("entering collision check on_raft false");
-            for other in arena.collisions() {
+            for other  in arena.collisions() {
+                if let Some(winbox) = other.as_any().downcast_ref::<WinBox>() {
+                    for i in 0..5 {
+                        if winbox.get_number() == i as i32 && self.winbox_list[i] == false {
+                            self.on_free_winbox = true; 
+                            self.winbox_list[i] = true;                    
+                        }
+                        else {
+                            self.on_occupied_winbox = true;
+                        }
+                    }
+                    
+                    // if  winbox.get_occupied() {
+                    //     self.on_occupied_winbox = true;
+                    //     log("on occupied winbox");
+                    //     //let mut winbox_mut = winbox.as_mut();
+                    //     self.modify_occupied_winbox(winbox, true);
+                    // }
+                    // else {
+                    //     *winbox.occupied() = true;
+                    //     self.on_free_winbox = true;
+                    //     log("on free winbox");
+                    // }
+                    
+                }
                 if let Some(_) = other.as_any().downcast_ref::<Vehicle>() {
                     self.blinking = 20;
                     self.lives -= 1;
@@ -227,7 +290,7 @@ impl Actor for Frog {
                 if let Some(_) = other.as_any().downcast_ref::<Water>() {
                     //self.lives -= 1;
                     self.on_water = true;
-                    log("on water true")
+                    log("on water true");
                 }
                 if let Some(_) = other.as_any().downcast_ref::<Turtle>() {
                     if other.sprite().is_some() {
@@ -237,25 +300,21 @@ impl Actor for Frog {
                     if self.count_steps == 0 {
                         self.dragging = other.speed();
                     }
-                                                            // if other.sprite().is_some() {
-                    //      self.on_raft = true;
-                    //     if self.count_steps == 0 {
-                    //         self.dragging = other.speed();
-                    //     }
-                    // }
-                    // else {
-                    //     self.lives -= 1;
-                    //     self.pos = pt(arena.size().x/2, arena.size().y - 32);
-                    // }
                 }
+                
 
             
         }
 
-        if !self.on_raft && self.on_water {
+        if (!self.on_raft || self.on_occupied_winbox) && self.on_water && !self.on_free_winbox {
             self.blinking = 20;
             self.lives -= 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
+        }
+        else if self.on_free_winbox && self.on_water && !self.on_raft {
+            self.count_winbox += 1;
+            self.pos = pt(arena.size().x/2, arena.size().y - 32);
+            log("countwin incremented")
         }
 
         let keys = arena.current_keys();
@@ -331,7 +390,6 @@ impl Actor for Frog {
 
 pub struct BounceGame {
     arena: Arena,
-    playtime: i32, 
 }
 impl BounceGame {
     // fn randpt(size: Pt) -> Pt {
@@ -345,10 +403,18 @@ impl BounceGame {
         let mut arena = Arena::new(size);
         //let size = size - pt(20, 20);
         arena.spawn(Box::new(Water::new(pt(-32,32))));
+        for i in 0..5
+        {
+            arena.spawn(Box::new(WinBox::new(pt(48 + i*128,32), i)));
+        }
+
+        // for i in 0..5 {
+        //     arena.spawn(Box::new(WinBox::new(pt(32,32))));
+        // }
 
         for i in 0..5 {
             let mut updatepos = 0;
-            let mut speed = randint(2, 7);
+            let mut speed = randint(1, 5);
             
             if  i%2 != 0 {
                 speed = - speed
@@ -357,7 +423,7 @@ impl BounceGame {
                 //arena.spawn(Box::new(Vehicle::new(BounceGame::randpt(size), true, -1)));
                 let car = randint(0, 1);
                 arena.spawn(Box::new(Vehicle::new(pt(updatepos, 384-(32*i)), if car == 1 {true} else {false}, speed)));
-                updatepos += randint(70, 300);
+                updatepos += randint(70, 250);
             }
         }
 
@@ -375,7 +441,7 @@ impl BounceGame {
 
         for i in 0..5 {
             let mut updatepos = 0;
-            let speed = randint(1, 4);
+            let speed = randint(1, 3);
 
             // for _ in 0..nrafts {
             //     arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
@@ -392,13 +458,13 @@ impl BounceGame {
                     {
                         arena.spawn(Box::new(Turtle::new(pt(updatepos + 32*n, 192-(32*i)), -speed, under_water, sprite_tick)));
                     }
-                    updatepos += randint(100, 350); 
+                    updatepos += randint(100, 250); 
                 }
             }
             else {
                 for _ in 0..nrafts {
                     arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
-                    updatepos += randint(100, 350);
+                    updatepos += randint(100, 250);
                 }
             }
 
@@ -409,12 +475,21 @@ impl BounceGame {
         // for _ in 0..nghosts {
         //     arena.spawn(Box::new(Ghost::new(BounceGame::randpt(size))));
         // }
-        BounceGame{arena: arena, playtime: 120}
+        BounceGame{arena: arena}
     }
     pub fn game_over(&self) -> bool { self.remaining_lives() <= 0 }
-    pub fn game_won(&self) -> bool { self.remaining_time() <= 0 }
-    pub fn remaining_time(&self) -> i32 {
-        self.playtime - self.arena.count() / 30
+    pub fn game_won(&self) -> bool { self.winbox_occupied().iter().all(|&value| value == true) }
+    pub fn winbox_occupied (&self) -> [bool; 5] {
+        let mut winbox = [false; 5];
+        let actors = self.actors();
+        for a in actors
+        {
+            if let Some(hero) = a.as_any().downcast_ref::<Frog>() {
+                winbox = hero.get_winbox_list();
+                return winbox;
+            }
+        }
+        winbox
     }
     pub fn remaining_lives(&self) -> i32 {
         let mut lives = 0;
