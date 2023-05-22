@@ -2,8 +2,102 @@ use core::num;
 use std::any::Any;
 use std::cmp::{min, max};
 
-use crate::{actor::*, log, rand};
+use crate::{actor::*, log, rand, g2d};
 use crate::rand::*;
+use crate::g2d::*;
+
+pub struct CrocodileHead {
+    pos: Pt,
+    step: Pt,
+    size: Pt,
+    speed: i32,
+    change_sprite: i32,
+    sprite_fps: i32,
+    sprite_tick: i32,
+    open_mouth: bool,
+}
+impl CrocodileHead {
+    pub fn new(pos: Pt, speed: i32, sprite_tick: i32) -> CrocodileHead {
+        CrocodileHead{pos: pos, step: pt(1, 0), size: pt(32 , 32), speed: speed, change_sprite: 0, sprite_fps: 40, sprite_tick: sprite_tick, open_mouth: false}
+    }
+
+    pub fn get_open_mouth(&self) -> bool { self.open_mouth }
+}
+impl Actor for CrocodileHead {
+    fn act(&mut self, arena: &mut ArenaStatus) {
+        //g2d::draw_image_clip("frogger.png".to_string(), self.pos-pt(64, 0), pt(192, 224), pt(64, 32));
+        self.change_sprite += 1;
+        if self.change_sprite > (self.sprite_tick + self.sprite_fps * 2) {
+            self.change_sprite = self.sprite_tick; 
+        } 
+
+        if self.change_sprite >= (self.sprite_fps + self.sprite_tick) && self.change_sprite < (self.sprite_fps * 2 + self.sprite_tick) {     
+            self.open_mouth = true
+        }
+        else {
+            self.open_mouth = false;
+        }
+
+        if self.pos.x < -300 { self.pos.x = arena.size().x + 300 }
+        if self.pos.x > arena.size().x + 300 { self.pos.x = -300 }
+
+        self.step.x = self.speed;
+        self.pos = self.pos + self.step;
+    }
+    fn pos(&self) -> Pt { self.pos }
+    fn size(&self) -> Pt { self.size }
+    fn sprite(&self) -> Option<Pt> { 
+        //Some(pt(192, 224))
+        // if self.change_sprite >= self.sprite_tick && self.change_sprite < (self.sprite_fps + self.sprite_tick) {
+        //     self.open = true;
+        //     Some(pt(288, 224))
+        // }
+        if self.change_sprite >= (self.sprite_fps + self.sprite_tick) && self.change_sprite < (self.sprite_fps * 2 + self.sprite_tick) {
+            //self.open = false;
+            Some(pt(256, 224))
+        }
+        else {
+            //self.open = true;
+            Some(pt(288, 224))
+        }
+        
+    }
+    fn alive(&self) -> bool { true }
+    fn as_any(&self) -> &dyn Any { self }
+    fn speed(&self) -> i32 { self.speed }
+}
+
+pub struct CrocodileBody {
+    pos: Pt,
+    step: Pt,
+    size: Pt,
+    speed: i32,
+}
+impl CrocodileBody {
+    pub fn new(pos: Pt, speed: i32) -> CrocodileBody {
+        CrocodileBody{pos: pos, step: pt(1, 0), size: pt(64 , 32), speed: speed}
+    }
+}
+impl Actor for CrocodileBody {
+    fn act(&mut self, arena: &mut ArenaStatus) {
+        //g2d::draw_image_clip("frogger.png".to_string(), self.pos-pt(64, 0), pt(192, 224), pt(64, 32));
+
+        if self.pos.x < -300 { self.pos.x = arena.size().x + 300 }
+        if self.pos.x > arena.size().x + 300 { self.pos.x = -300 }
+
+        self.step.x = self.speed;
+        self.pos = self.pos + self.step;
+    }
+    fn pos(&self) -> Pt { self.pos }
+    fn size(&self) -> Pt { self.size }
+    fn sprite(&self) -> Option<Pt> { 
+        Some(pt(192, 224)) 
+    }
+    fn alive(&self) -> bool { true }
+    fn as_any(&self) -> &dyn Any { self }
+    fn speed(&self) -> i32 { self.speed }
+}
+
 
 pub struct Raft {
     pos: Pt,
@@ -232,11 +326,13 @@ pub struct Frog {
     on_free_winbox: bool,
     on_occupied_winbox: bool,
     direction: String, 
+    on_crocodile_head: bool,
 }
 impl Frog {
     pub fn new(pos: Pt) -> Frog {
         Frog{pos: pos, step: pt(0, 0), size: pt(32, 32),
-            speed: 32, lives: 5, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false, count_winbox: 0, winbox_list: [false;5], on_free_winbox:false, on_occupied_winbox:false, direction: "Up".to_string()}
+            speed: 32, lives: 5, blinking: 0, count_steps: 0, dragging: 0, on_raft: false, on_water: false, count_winbox: 0, winbox_list: [false;5], on_free_winbox:false, on_occupied_winbox:false, direction: "Up".to_string(),
+            on_crocodile_head: false}
     }
     fn lives(&self) -> i32 { self.lives }
     fn get_winbox_list(&self) -> [bool;5] { self.winbox_list }
@@ -249,6 +345,7 @@ impl Actor for Frog {
             self.on_water = false;
             self.on_free_winbox = false;
             self.on_occupied_winbox = false;
+            self.on_crocodile_head = false;
             //log("entering collision check on_raft false");
             for other  in arena.collisions() {
                 if let Some(winbox) = other.as_any().downcast_ref::<WinBox>() {
@@ -291,7 +388,6 @@ impl Actor for Frog {
                 if let Some(_) = other.as_any().downcast_ref::<Water>() {
                     //self.lives -= 1;
                     self.on_water = true;
-                    log("on water true");
                 }
                 if let Some(_) = other.as_any().downcast_ref::<Turtle>() {
                     if other.sprite().is_some() {
@@ -302,11 +398,32 @@ impl Actor for Frog {
                         self.dragging = other.speed();
                     }
                 }
+                if let Some(_) = other.as_any().downcast_ref::<CrocodileBody>() {
+                    self.on_raft = true;
+                    if self.count_steps == 0 {
+                        self.dragging = other.speed();
+                    }
+                }
+                if let Some(crocodile) = other.as_any().downcast_ref::<CrocodileHead>() {
+                    if crocodile.get_open_mouth() { self.on_crocodile_head = true;log("mouth open"); } 
+                    else { 
+                        log("mouth closed");
+                        self.on_raft = true;
+                        if self.count_steps == 0 {
+                        self.dragging = other.speed();
+                        }
+                    }
+                }
                 
 
             
         }
-
+        if self.on_water && self.on_crocodile_head {
+            self.blinking = 20;
+            self.lives -= 1;
+            self.pos = pt(arena.size().x/2, arena.size().y - 32);
+            self.direction = "Up".to_string();
+        }
         if (!self.on_raft || self.on_occupied_winbox) && self.on_water && !self.on_free_winbox {
             self.blinking = 20;
             self.lives -= 1;
@@ -317,6 +434,9 @@ impl Actor for Frog {
             self.count_winbox += 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
             log("countwin incremented")
+        }
+        else if self.on_water {
+            
         }
 
         let keys = arena.current_keys();
@@ -486,7 +606,14 @@ impl BounceGame {
             }
             else {
                 for _ in 0..nrafts {
-                    arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
+                    let choice = randint(0,1);
+                    if choice == 0 {
+                        arena.spawn(Box::new(CrocodileHead::new(pt(updatepos + 64, 192-(32*i)), speed, randint(1, 10))));
+                        arena.spawn(Box::new(CrocodileBody::new(pt(updatepos, 192-(32*i)), speed)));
+                    }
+                    else {
+                        arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
+                    }
                     updatepos += randint(100, 250);
                 }
             }
