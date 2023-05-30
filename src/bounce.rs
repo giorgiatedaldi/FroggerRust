@@ -1,10 +1,8 @@
-use core::num;
 use std::any::Any;
 use std::cmp::{min, max};
 
-use crate::{actor::*, log, rand, g2d};
+use crate::actor::*;
 use crate::rand::*;
-use crate::g2d::*;
 
 pub struct CrocodileHead {
     pos: Pt,
@@ -25,7 +23,6 @@ impl CrocodileHead {
 }
 impl Actor for CrocodileHead {
     fn act(&mut self, arena: &mut ArenaStatus) {
-        //g2d::draw_image_clip("frogger.png".to_string(), self.pos-pt(64, 0), pt(192, 224), pt(64, 32));
         self.change_sprite += 1;
         if self.change_sprite > (self.sprite_tick + self.sprite_fps * 2) {
             self.change_sprite = self.sprite_tick; 
@@ -47,17 +44,10 @@ impl Actor for CrocodileHead {
     fn pos(&self) -> Pt { self.pos }
     fn size(&self) -> Pt { self.size }
     fn sprite(&self) -> Option<Pt> { 
-        //Some(pt(192, 224))
-        // if self.change_sprite >= self.sprite_tick && self.change_sprite < (self.sprite_fps + self.sprite_tick) {
-        //     self.open = true;
-        //     Some(pt(288, 224))
-        // }
         if self.change_sprite >= (self.sprite_fps + self.sprite_tick) && self.change_sprite < (self.sprite_fps * 2 + self.sprite_tick) {
-            //self.open = false;
             Some(pt(256, 224))
         }
         else {
-            //self.open = true;
             Some(pt(288, 224))
         }
         
@@ -80,7 +70,6 @@ impl CrocodileBody {
 }
 impl Actor for CrocodileBody {
     fn act(&mut self, arena: &mut ArenaStatus) {
-        //g2d::draw_image_clip("frogger.png".to_string(), self.pos-pt(64, 0), pt(192, 224), pt(64, 32));
 
         if self.pos.x < -300 { self.pos.x = arena.size().x + 300 }
         if self.pos.x > arena.size().x + 300 { self.pos.x = -300 }
@@ -98,7 +87,6 @@ impl Actor for CrocodileBody {
     fn speed(&self) -> i32 { self.speed }
 }
 
-
 pub struct Raft {
     pos: Pt,
     step: Pt,
@@ -113,19 +101,8 @@ impl Raft {
 }
 impl Actor for Raft {
     fn act(&mut self, arena: &mut ArenaStatus) {
-        // for other in arena.collisions() {
-        //     if let Some(_) = other.as_any().downcast_ref::<Ghost>() {
-        //     } else {
-        //         let diff = self.pos - other.pos();
-        //         self.step.x = self.speed * if diff.x > 0 { 1 } else { -1 };
-        //         self.step.y = self.speed * if diff.y > 0 { 1 } else { -1 };
-        //     }
-        // }
         if self.pos.x < -300 { self.pos.x = arena.size().x + 300 }
         if self.pos.x > arena.size().x + 300 { self.pos.x = -300 }
-        //if tl.y < 0 { self.step.y = self.speed; }
-        //if br.x > 0 { self.step.x = -self.speed; }
-        //if br.y > 0 { self.step.y = -self.speed; }
         self.step.x = self.speed;
         self.pos = self.pos + self.step;
     }
@@ -164,19 +141,8 @@ impl Actor for Turtle {
             self.change_sprite = self.sprite_tick;
         }   
         
-        // for other in arena.collisions() {
-        //     if let Some(_) = other.as_any().downcast_ref::<Ghost>() {
-        //     } else {
-        //         let diff = self.pos - other.pos();
-        //         self.step.x = self.speed * if diff.x > 0 { 1 } else { -1 };
-        //         self.step.y = self.speed * if diff.y > 0 { 1 } else { -1 };
-        //     }
-        // }
         if self.pos.x < -300 { self.pos.x = arena.size().x + 300 }
         if self.pos.x > arena.size().x + 300 { self.pos.x = -300 }
-        //if tl.y < 0 { self.step.y = self.speed; }
-        //if br.x > 0 { self.step.x = -self.speed; }
-        //if br.y > 0 { self.step.y = -self.speed; }
         self.step.x = self.speed;
         self.pos = self.pos + self.step;
     }
@@ -222,27 +188,15 @@ impl Vehicle {
 }
 impl Actor for Vehicle {
     fn act(&mut self, arena: &mut ArenaStatus) {
-        // for other in arena.collisions() {
-        //     if let Some(_) = other.as_any().downcast_ref::<Ghost>() {
-        //     } else {
-        //         let diff = self.pos - other.pos();
-        //         self.step.x = self.speed * if diff.x > 0 { 1 } else { -1 };
-        //         self.step.y = self.speed * if diff.y > 0 { 1 } else { -1 };
-        //     }
-        // }
-        //let tl = self.pos + self.step;  // top-left
+
         if self.pos.x < -300 { self.pos.x = arena.size().x + 300 }
         if self.pos.x > arena.size().x + 300 { self.pos.x = -300 }
-        //if tl.y < 0 { self.step.y = self.speed; }
-        //if br.x > 0 { self.step.x = -self.speed; }
-        //if br.y > 0 { self.step.y = -self.speed; }
         self.step.x = self.speed;
         self.pos = self.pos + self.step;
     }
     fn pos(&self) -> Pt { self.pos }
     fn size(&self) -> Pt { self.size }
     fn sprite(&self) -> Option<Pt> { 
-        //let mut car_type = 0;
         if self.car {
             Some(pt(self.type_car*32, if self.speed >= 0 && self.type_car == 8 { 32 } else if self.speed < 0 && self.type_car == 8 { 0 } else if self.speed >= 0 { 0 } else { 32 } )) 
         }
@@ -264,7 +218,7 @@ pub struct Water {
 }
 impl Water {
     pub fn new(pos: Pt) -> Water {
-        Water{pos: pos, size: pt(704, 192)}
+        Water{pos: pos, size: pt(1000, 192)}
     }
 }
 impl Actor for Water {
@@ -340,83 +294,62 @@ impl Frog {
 impl Actor for Frog {
 
     fn act(&mut self, arena: &mut ArenaStatus) {
-
-            self.on_raft = false;
-            self.on_water = false;
-            self.on_free_winbox = false;
-            self.on_occupied_winbox = false;
-            self.on_crocodile_head = false;
-            //log("entering collision check on_raft false");
-            for other  in arena.collisions() {
-                if let Some(winbox) = other.as_any().downcast_ref::<WinBox>() {
-                    for i in 0..5 {
-                        if winbox.get_number() == i as i32 && self.winbox_list[i] == false {
-                            self.on_free_winbox = true; 
-                            self.winbox_list[i] = true;                    
-                        }
-                        else {
-                            self.on_occupied_winbox = true;
-                        }
+        self.on_raft = false;
+        self.on_water = false;
+        self.on_free_winbox = false;
+        self.on_occupied_winbox = false;
+        self.on_crocodile_head = false;
+        for other  in arena.collisions() {
+            if let Some(winbox) = other.as_any().downcast_ref::<WinBox>() {
+                for i in 0..5 {
+                    if winbox.get_number() == i as i32 && self.winbox_list[i] == false {
+                        self.on_free_winbox = true; 
+                        self.winbox_list[i] = true;                    
                     }
-                    
-                    // if  winbox.get_occupied() {
-                    //     self.on_occupied_winbox = true;
-                    //     log("on occupied winbox");
-                    //     //let mut winbox_mut = winbox.as_mut();
-                    //     self.modify_occupied_winbox(winbox, true);
-                    // }
-                    // else {
-                    //     *winbox.occupied() = true;
-                    //     self.on_free_winbox = true;
-                    //     log("on free winbox");
-                    // }
-                    
-                }
-                if let Some(_) = other.as_any().downcast_ref::<Vehicle>() {
-                    self.blinking = 20;
-                    self.lives -= 1;
-                    self.pos = pt(arena.size().x/2, arena.size().y - 32);
-                    self.direction = "Up".to_string();
-                }
-                if let Some(_) = other.as_any().downcast_ref::<Raft>() {
-                    self.on_raft = true;
-                    log("on_raft true");
-                    if self.count_steps == 0 {
-                        self.dragging = other.speed();
-                    }
-                }
-                if let Some(_) = other.as_any().downcast_ref::<Water>() {
-                    //self.lives -= 1;
-                    self.on_water = true;
-                }
-                if let Some(_) = other.as_any().downcast_ref::<Turtle>() {
-                    if other.sprite().is_some() {
-                        self.on_raft = true;
-                    }
-                    
-                    if self.count_steps == 0 {
-                        self.dragging = other.speed();
-                    }
-                }
-                if let Some(_) = other.as_any().downcast_ref::<CrocodileBody>() {
-                    self.on_raft = true;
-                    if self.count_steps == 0 {
-                        self.dragging = other.speed();
-                    }
-                }
-                if let Some(crocodile) = other.as_any().downcast_ref::<CrocodileHead>() {
-                    if crocodile.get_open_mouth() { self.on_crocodile_head = true;log("mouth open"); } 
-                    else { 
-                        log("mouth closed");
-                        self.on_raft = true;
-                        if self.count_steps == 0 {
-                        self.dragging = other.speed();
-                        }
+                    else {
+                        self.on_occupied_winbox = true;
                     }
                 }
                 
-
-            
+            }
+            if let Some(_) = other.as_any().downcast_ref::<Vehicle>() {
+                self.blinking = 20;
+                self.lives -= 1;
+                self.pos = pt(arena.size().x/2, arena.size().y - 32);
+                self.direction = "Up".to_string();
+            }
+            if let Some(_) = other.as_any().downcast_ref::<Raft>() {
+                self.on_raft = true;
+                if self.count_steps == 0 {
+                    self.dragging = other.speed();
+                }
+            }
+            if let Some(_) = other.as_any().downcast_ref::<Water>() {
+                self.on_water = true;
+            }
+            if let Some(_) = other.as_any().downcast_ref::<Turtle>() {
+                if other.sprite().is_some() {
+                    self.on_raft = true;
+                }
+                if self.count_steps == 0 {
+                    self.dragging = other.speed();
+                }
+            }
+            if let Some(_) = other.as_any().downcast_ref::<CrocodileBody>() {
+                self.on_raft = true;
+                if self.count_steps == 0 {
+                    self.dragging = other.speed();
+                }
+            }
+            if let Some(crocodile) = other.as_any().downcast_ref::<CrocodileHead>() {
+                if crocodile.get_open_mouth() { self.on_crocodile_head = true;} 
+                else { 
+                    self.on_raft = true;
+                    if self.count_steps == 0 {
+                    self.dragging = other.speed();
+                    }
+                }
+            }
         }
         if self.on_water && self.on_crocodile_head {
             self.blinking = 20;
@@ -433,10 +366,6 @@ impl Actor for Frog {
         else if self.on_free_winbox && self.on_water && !self.on_raft {
             self.count_winbox += 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
-            log("countwin incremented")
-        }
-        else if self.on_water {
-            
         }
 
         let keys = arena.current_keys();
@@ -474,26 +403,19 @@ impl Actor for Frog {
         if self.count_steps > 0 {
             self.pos.x += self.step.x;
             self.pos.y += self.step.y;
-            self.count_steps -= 16;
+            self.count_steps -= 8;
         }
         self.pos.x += self.dragging;
         self.dragging = 0;
-        //self.pos = self.pos + self.step;
 
-        // if (self.pos.y > 64 && self.pos.y < 224) || (self.pos.y > 64 && self.pos.y < 215) && (self.pos.x < self.size.x || self.pos.x > 640 + self.size.x) {
-        //     if !self.on_raft {
-        //         log("in water and on_raft = false");
-        //         self.lives -= 1;
-        //     }
-        // }
 
         let scr = arena.size() - self.size;
-        if ! self.on_water {
+        if self.pos.y >= (192 + 32) {
             self.pos.x = min(max(self.pos.x, 0), scr.x);  // clamp
             self.pos.y = min(max(self.pos.y, 0), scr.y);  // clamp
         }
 
-        if self.pos.x > 640 || self.pos.x < -32 {
+        if self.pos.x >= 640 || self.pos.x <= -32 {
             self.blinking = 20;
             self.lives -= 1;
             self.pos = pt(arena.size().x/2, arena.size().y - 32);
@@ -535,25 +457,14 @@ pub struct BounceGame {
     arena: Arena,
 }
 impl BounceGame {
-    // fn randpt(size: Pt) -> Pt {
-    //     let mut p = pt(randint(0, size.x), randint(0, size.y));
-    //     while (p.x - size.x / 2).pow(2) + (p.y - size.y / 2).pow(2) < 10000 {
-    //         p = pt(randint(0, size.x), randint(0, size.y));
-    //     }
-    //     return p;
-    // }
     pub fn new(size: Pt, nvehicles: i32, nrafts: i32, nturtles: i32) -> BounceGame {
         let mut arena = Arena::new(size);
-        //let size = size - pt(20, 20);
+
         arena.spawn(Box::new(Water::new(pt(-32,32))));
         for i in 0..5
         {
             arena.spawn(Box::new(WinBox::new(pt(48 + i*128,32), i)));
         }
-
-        // for i in 0..5 {
-        //     arena.spawn(Box::new(WinBox::new(pt(32,32))));
-        // }
 
         for i in 0..5 {
             let mut updatepos = 0;
@@ -563,38 +474,18 @@ impl BounceGame {
                 speed = - speed
             }
             for _ in 0..nvehicles {
-                //arena.spawn(Box::new(Vehicle::new(BounceGame::randpt(size), true, -1)));
                 let car = randint(0, 1);
                 arena.spawn(Box::new(Vehicle::new(pt(updatepos, 384-(32*i)), if car == 1 {true} else {false}, speed)));
                 updatepos += randint(70, 250);
             }
         }
 
-        // for i in 0..5 {
-        //     let mut updatepos = 0;
-        //     let speed = randint(1, 4);
-            
-        //     for _ in 0..ntrunks {
-        //         //arena.spawn(Box::new(Vehicle::new(BounceGame::randpt(size), true, -1)));
-        //         //let car = randint(0, 1);
-        //         arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
-        //         updatepos += randint(100, 350);
-        //     }
-        // }
-
         for i in 0..5 {
             let mut updatepos = 0;
             let speed = randint(1, 3);
 
-            // for _ in 0..nrafts {
-            //     arena.spawn(Box::new(Raft::new(pt(updatepos, 192-(32*i)), speed, randint(0, 1))));
-            //     updatepos += randint(100, 350);
-            // }
-
             if i%2 == 0 {
                 for _ in 0..nturtles {
-                //arena.spawn(Box::new(Vehicle::new(BounceGame::randpt(size), true, -1)));
-                //let car = randint(0, 1);
                     let sprite_tick = randint(1, 10);
                     let under_water = randint(0,1);
                     for n in 0..randint(2, 3)
@@ -622,9 +513,6 @@ impl BounceGame {
 
         }
 
-        // for _ in 0..nghosts {
-        //     arena.spawn(Box::new(Ghost::new(BounceGame::randpt(size))));
-        // }
         BounceGame{arena: arena}
     }
     pub fn game_over(&self) -> bool { self.remaining_lives() <= 0 }

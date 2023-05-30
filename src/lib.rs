@@ -26,7 +26,7 @@ impl BounceGui {
             if let Some(img) = b.sprite() {
                 g2d::draw_image_clip("frogger.png".to_string(), b.pos(), img, b.size());
             } else {
-                //g2d::fill_rect(b.pos(), b.size());
+              //g2d::fill_rect(b.pos(), b.size());
             }
         }
         //let red = g2d::Color(255, 0, 0);
